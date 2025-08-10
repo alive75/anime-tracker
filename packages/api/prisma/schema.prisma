@@ -1,0 +1,85 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Define o gerador de cliente Prisma. Ele irá gerar o Prisma Client em JavaScript/TypeScript.
+generator client {
+    provider = "prisma-client-js"
+}
+
+// Define a fonte de dados do seu banco.
+// O exemplo usa PostgreSQL. Você pode mudar para "mysql", "sqlite", "sqlserver", "mongodb" ou "cockroachdb".
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL") // A URL do banco de dados é carregada de uma variável de ambiente.
+}
+
+// Enum para o status de lançamento de um anime.
+enum ReleaseStatus {
+    RELEASING
+    FINISHED
+    NOT_YET_RELEASED
+    CANCELLED
+    HIATUS
+}
+
+// Enum para o status do anime na lista do usuário.
+enum UserAnimeStatus {
+    WATCHING
+    COMPLETED
+    ON_HOLD
+    DROPPED
+    PLAN_TO_WATCH
+}
+
+// Modelo para os usuários da aplicação.
+model User {
+    id            Int      @id @default(autoincrement())
+    email         String   @unique
+    password_hash String
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+
+    // Relação: Um usuário pode ter muitos animes em sua lista.
+    animeList UserAnimeList[]
+
+    @@map("users") // Mapeia este modelo para a tabela "users" no banco de dados.
+}
+
+// Modelo para os animes.
+model Anime {
+    id              Int           @id @default(autoincrement())
+    external_api_id Int           @unique // ID único vindo de uma API externa (ex: MyAnimeList, AniList).
+    titles          Json // Permite armazenar títulos em diferentes idiomas (ex: {"english": "...", "japanese": "..."}).
+    description     String        @db.Text
+    year            Int
+    total_episodes  Int
+    status          ReleaseStatus
+    image_url       String
+    createdAt       DateTime      @default(now())
+    updatedAt       DateTime      @updatedAt
+
+    // Relação: Um anime pode estar na lista de muitos usuários.
+    userLists UserAnimeList[]
+
+    @@map("animes") // Mapeia este modelo para a tabela "animes" no banco de dados.
+}
+
+// Modelo para a tabela de junção (relação muitos-para-muitos) entre User e Anime.
+// Armazena informações específicas da relação, como o status e a nota.
+model UserAnimeList {
+    userId           Int
+    animeId          Int
+    status           UserAnimeStatus
+    watched_episodes Int             @default(0)
+    score            Int? // Nota que o usuário deu (opcional, de 0 a 10, por exemplo).
+    createdAt        DateTime        @default(now())
+    updatedAt        DateTime        @updatedAt
+
+    // Relações com os modelos User e Anime.
+    user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+    anime Anime @relation(fields: [animeId], references: [id], onDelete: Cascade)
+
+    // Define uma chave primária composta para garantir que um usuário só possa adicionar um anime uma vez.
+    @@id([userId, animeId])
+    @@map("user_anime_list") // Mapeia este modelo para a tabela "user_anime_list" no banco de dados.
+}
