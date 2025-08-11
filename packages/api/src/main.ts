@@ -1,18 +1,42 @@
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+    try {
+        console.log('🔄 Criando aplicação NestJS...');
+        const app = await NestFactory.create(AppModule);
+        console.log('✅ Aplicação criada com sucesso');
 
-  // Enable global validation pipe to use class-validator DTOs
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true, // Strip away properties that do not have any decorators
-    forbidNonWhitelisted: true, // Throw an error if non-whitelisted values are provided
-    transform: true, // Automatically transform payloads to be objects typed according to their DTO classes
-  }));
+        console.log('🔄 Configurando CORS...');
+        app.enableCors({
+            origin: 'http://localhost:5173',
+            methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+            allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+            credentials: true,
+        });
+        console.log('✅ CORS configurado');
 
-  // CORS can be enabled here later, e.g., app.enableCors();
-  await app.listen(3001); // Using port 3001 for the api
+        console.log('🔄 Configurando ValidationPipe...');
+        app.useGlobalPipes(new ValidationPipe({
+            whitelist: true,
+            transform: true,
+        }));
+        console.log('✅ ValidationPipe configurado');
+
+        console.log('🔄 Iniciando servidor na porta 3001...');
+        await app.listen(3001);
+        console.log('🚀 API server is running on http://localhost:3001');
+    } catch (error) {
+        console.error('❌ Erro ao iniciar servidor:', error);
+    }
 }
-bootstrap();
+
+console.log('📍 Arquivo main.ts foi carregado');
+
+bootstrap().then(() => {
+    console.log('✅ Bootstrap concluído');
+}).catch(error => {
+    console.error('❌ Erro no bootstrap:', error);
+});
