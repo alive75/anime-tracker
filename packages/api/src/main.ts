@@ -1,42 +1,40 @@
-
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { ExpressAdapter } from '@nestjs/platform-express';
 
 async function bootstrap() {
-    try {
-        console.log('🔄 Criando aplicação NestJS...');
-        const app = await NestFactory.create(AppModule);
-        console.log('✅ Aplicação criada com sucesso');
+    const app = await NestFactory.create<NestExpressApplication>(
+        AppModule,
+        new ExpressAdapter(),
+    );
 
-        console.log('🔄 Configurando CORS...');
-        app.enableCors({
-            origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-            methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-            allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-            credentials: true,
-        });
-        console.log('✅ CORS configurado');
+    // Configure CORS to explicitly allow the frontend origin and required methods/headers.
+    // This is a more secure and standard approach.
+    app.enableCors({
+        origin: 'http://localhost:5173',
+        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+        credentials: true,
+        allowedHeaders: 'Content-Type, Accept, Authorization',
+    });
 
-        console.log('🔄 Configurando ValidationPipe...');
-        app.useGlobalPipes(new ValidationPipe({
-            whitelist: true,
-            transform: true,
-        }));
-        console.log('✅ ValidationPipe configurado');
+    // Enable global validation pipe to use class-validator DTOs.
+    // The `forbidNonWhitelisted` option is removed as it can cause issues with
+    // preflight OPTIONS requests by throwing errors on empty bodies, which
+    // interferes with the CORS middleware.
+    app.useGlobalPipes(new ValidationPipe({
+        whitelist: true, // Strip away properties that do not have any decorators
+        transform: true, // Automatically transform payloads to be objects typed according to their DTO classes
+    }));
 
-        console.log('🔄 Iniciando servidor na porta 3001...');
-        await app.listen(3001);
-        console.log('🚀 API server is running on http://localhost:3001');
-    } catch (error) {
-        console.error('❌ Erro ao iniciar servidor:', error);
-    }
+    // Add a global prefix to all routes
+    app.setGlobalPrefix('api');
+
+    // Enable shutdown hooks for graceful shutdown (e.g., for Prisma)
+    app.enableShutdownHooks();
+
+    await app.listen(3001); // Using port 3001 for the api
+    console.log(`🚀 API server is running on http://localhost:3001/api`);
 }
-
-console.log('📍 Arquivo main.ts foi carregado');
-
-bootstrap().then(() => {
-    console.log('✅ Bootstrap concluído');
-}).catch(error => {
-    console.error('❌ Erro no bootstrap:', error);
-});
+bootstrap();

@@ -1,18 +1,12 @@
 import axios from 'axios';
 
-// The base URL for the backend API is now read from Vite's environment variables.
-// This is a more flexible approach than hardcoding the URL.
-// VITE_API_URL should be defined in a .env file in the packages/web directory.
-let baseURL = process.env.VITE_API_URL || 'http://localhost:3001';
-
-// Automatically upgrade to HTTPS if the frontend is served over HTTPS.
-// This resolves mixed content errors in production environments.
-if (typeof window !== 'undefined' && window.location.protocol === 'https:' && baseURL.startsWith('http://')) {
-    baseURL = baseURL.replace('http://', 'https://');
-}
-
+// By using a relative baseURL, we can use the same code for both
+// local development and production.
+// In development, Vite's proxy will forward requests from /api to the backend.
+// In production, the reverse proxy (e.g., in Coolify, Vercel, etc.)
+// should be configured to do the same.
 const api = axios.create({
-    baseURL: baseURL,
+    baseURL: '/api',
 });
 
 // Add a request interceptor to include the token in headers
