@@ -10,10 +10,21 @@ async function bootstrap() {
         new ExpressAdapter(),
     );
 
-    // Configure CORS to explicitly allow the frontend origin and required methods/headers.
-    // This is a more secure and standard approach.
+    const allowedOrigins = [
+        'http://localhost:5173', // For local development
+        'https://anime.ts75.uk',   // For production
+    ];
+
+    // Configure CORS to dynamically allow origins from the whitelist.
     app.enableCors({
-        origin: 'http://localhost:5173',
+        origin: (origin, callback) => {
+            // Allow requests with no origin (like mobile apps or curl requests)
+            if (!origin || allowedOrigins.includes(origin)) {
+                callback(null, true);
+            } else {
+                callback(new Error('Not allowed by CORS'));
+            }
+        },
         methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
         credentials: true,
         allowedHeaders: 'Content-Type, Accept, Authorization',
