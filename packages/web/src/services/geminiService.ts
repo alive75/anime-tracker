@@ -39,8 +39,12 @@ export const parseAnimeCsv = async (csvText: string): Promise<{ title: string; w
             }
         });
 
-        const text = response.text.trim();
-        return JSON.parse(text);
+        const text = response.text;
+        if (!text) {
+            console.error("Error parsing CSV data: Received empty response from Gemini.");
+            return [];
+        }
+        return JSON.parse(text.trim());
     } catch (error) {
         console.error("Error parsing CSV data:", error);
         return [];
@@ -85,8 +89,12 @@ export const getAnimeRecommendations = async (watchedTitles: string[]): Promise<
             }
         });
 
-        const text = response.text.trim();
-        return JSON.parse(text);
+        const text = response.text;
+        if (!text) {
+            console.error("Error getting anime recommendations: Received empty response from Gemini.");
+            return [];
+        }
+        return JSON.parse(text.trim());
     } catch (error) {
         console.error("Error getting anime recommendations:", error);
         return [];

@@ -1,23 +1,34 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
-// import { PrismaClient } from '@prisma/client';
-
-// Using require to bypass static analysis issues with generated client
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { PrismaClient } = require('@prisma/client');
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit {
-  constructor() {
-    super();
-  }
+export class PrismaService implements OnModuleInit, OnModuleDestroy {
+    // Use composition instead of inheritance to avoid type resolution issues.
+    private readonly prisma: PrismaClient;
 
-  async onModuleInit() {
-    // This is a NestJS lifecycle hook.
-    // Prisma's $connect method is called when the module is initialized.
-    await this.$connect();
-  }
+    constructor() {
+        this.prisma = new PrismaClient();
+    }
 
-  // Note: For graceful shutdowns (e.g., calling $disconnect), you would need
-  // to enable shutdown hooks in your main.ts via `app.enableShutdownHooks()`.
-  // For this application's scope, we'll rely on the default connection management.
+    async onModuleInit() {
+        await this.prisma.$connect();
+    }
+
+    async onModuleDestroy() {
+        await this.prisma.$disconnect();
+    }
+
+    // Delegate property access to the underlying client.
+    // This is a workaround to avoid refactoring all services that use this service.
+    get user() {
+        return this.prisma.user;
+    }
+
+    get anime() {
+        return this.prisma.anime;
+    }
+
+    get userAnime() {
+        return this.prisma.userAnime;
+    }
 }
