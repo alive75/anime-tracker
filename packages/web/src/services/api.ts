@@ -1,5 +1,8 @@
 import axios from 'axios';
 
+// The base URL for the backend API is now read from Vite's environment variables.
+// This is a more flexible approach than hardcoding the URL.
+// VITE_API_URL should be defined in a .env file in the packages/web directory.
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
 });
