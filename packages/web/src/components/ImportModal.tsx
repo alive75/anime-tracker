@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Modal } from './Modal';
 import { parseAnimeCsv } from '../services/geminiService';
-import { UserAnimeStatus } from '../types';
+import { UserAnimeStatus, JikanAnimeSearchResult } from '../types';
+import api from '../services/api';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface ParsedAnime {
   title: string;
@@ -12,16 +14,30 @@ interface ParsedAnime {
 interface ImportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onImport: (animeList: ParsedAnime[]) => void;
+  // onImport is no longer needed as the component handles its own mutations
 }
 
 const templateCsv = `anime_title,watched_episodes,status\n"Solo Leveling",12,COMPLETED\n"Frieren: Beyond Journey's End",28,COMPLETED\n"One Piece",100,WATCHING`;
 
-export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) => {
+export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
   const [csvText, setCsvText] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [parsedAnimes, setParsedAnimes] = useState<ParsedAnime[]>([]);
   const [error, setError] = useState('');
+  
+  const queryClient = useQueryClient();
+
+  const addAnimeMutation = useMutation({
+    mutationFn: (data: { animeApiId: number, status: UserAnimeStatus, watchedEpisodes: number }) => api.post('/list', data),
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['anime-list'] });
+    },
+    onError: (error) => {
+        // Individual errors could be logged here
+        console.error("Failed to import an anime:", error);
+    }
+  });
 
   const handleProcess = async () => {
     if (!csvText.trim()) {
@@ -29,9 +45,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImp
       return;
     }
     setError('');
-    setIsLoading(true);
+    setIsProcessing(true);
     const result = await parseAnimeCsv(csvText);
-    setIsLoading(false);
+    setIsProcessing(false);
     if (result.length > 0) {
       setParsedAnimes(result);
     } else {
@@ -39,8 +55,26 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImp
     }
   };
 
-  const handleConfirmImport = () => {
-    onImport(parsedAnimes);
+  const handleConfirmImport = async () => {
+    setIsImporting(true);
+    for (const pa of parsedAnimes) {
+        try {
+            const searchRes = await api.get<{ data: JikanAnimeSearchResult[] }>(`/anime/search?q=${encodeURIComponent(pa.title)}`);
+            const animeResult = searchRes.data.data?.[0];
+            if (animeResult) {
+                await addAnimeMutation.mutateAsync({
+                    animeApiId: animeResult.mal_id,
+                    status: pa.status,
+                    watchedEpisodes: pa.watchedEpisodes,
+                });
+            } else {
+                 console.warn(`Could not find API details for anime: ${pa.title}`);
+            }
+        } catch(e) {
+            console.error(`Error processing ${pa.title}:`, e);
+        }
+    }
+    setIsImporting(false);
     handleClose();
   };
   
@@ -48,6 +82,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImp
     setCsvText('');
     setParsedAnimes([]);
     setError('');
+    setIsProcessing(false);
+    setIsImporting(false);
     onClose();
   }
 
@@ -71,10 +107,10 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImp
           <div className="mt-4 flex justify-end">
             <button
               onClick={handleProcess}
-              disabled={isLoading}
+              disabled={isProcessing}
               className="bg-brand-primary text-white px-4 py-2 rounded-md hover:bg-brand-primary/80 transition disabled:bg-base-300"
             >
-              {isLoading ? 'Processing...' : 'Process Data'}
+              {isProcessing ? 'Processing...' : 'Process Data'}
             </button>
           </div>
         </>
@@ -93,14 +129,16 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImp
              <button
               onClick={() => setParsedAnimes([])}
               className="bg-base-300 text-white px-4 py-2 rounded-md hover:bg-base-300/80 transition"
+              disabled={isImporting}
             >
               Back
             </button>
             <button
               onClick={handleConfirmImport}
               className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-600/80 transition"
+              disabled={isImporting}
             >
-              Confirm Import
+              {isImporting ? 'Importing...' : 'Confirm Import'}
             </button>
           </div>
         </>

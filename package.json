@@ -10,10 +10,12 @@
         "dev:api": "npm run start:dev --workspace=api",
         "dev:web": "npm run dev --workspace=web",
         "build:api": "npm run build --workspace=api",
-        "build:web": "npm run build --workspace=web"
+        "build:web": "npm run build --workspace=web",
+        "prisma": "npm -w api run prisma",
+        "db:reset": "npm run prisma -- migrate dev --name init"
     },
     "devDependencies": {
-        "@nestjs/cli": "^11.0.10",
+        "@nestjs/cli": "^10.0.0",
         "@nestjs/schematics": "^10.0.0",
         "@nestjs/testing": "^10.0.0",
         "@types/bcrypt": "^5.0.2",
@@ -48,6 +50,6 @@
         "ts-node": "^10.9.1",
         "tsconfig-paths": "^4.2.0",
         "typescript": "^5.2.2",
-        "vite": "^7.1.1"
+        "vite": "^5.2.0"
     }
 }
