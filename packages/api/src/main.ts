@@ -4,7 +4,6 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
-import { exit } from 'process';
 
 async function bootstrap() {
     const app = await NestFactory.create<NestExpressApplication>(
@@ -29,7 +28,7 @@ async function bootstrap() {
 
         // Using process.exit to ensure the container stops immediately,
         // which is important for "unhealthy" status detection by the orchestrator.
-        exit(1);
+        process.exit(1);
     }
     // --- End Validation ---
 

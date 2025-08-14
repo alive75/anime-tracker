@@ -1,5 +1,5 @@
 # Estágio 1: Builder - Constrói a aplicação
-# This Dockerfile expects the build context to be the monorepo root.
+# Este Dockerfile espera que o contexto de build seja a raiz do monorepo.
 FROM node:20-alpine AS builder
 
 # Instala o OpenSSL, que é uma dependência do Prisma Client para o Alpine.
@@ -8,22 +8,22 @@ RUN apk add --no-cache openssl
 
 WORKDIR /app
 
-# Copy all package manifests and lock file to leverage Docker cache
+# Copia os manifestos de pacotes e o lock file para aproveitar o cache do Docker.
 COPY package.json package-lock.json* ./
 COPY packages/api/package.json ./packages/api/
 COPY packages/web/package.json ./packages/web/
 
-# Install all dependencies for the monorepo
+# Instala todas as dependências do monorepo.
 RUN npm install
 
-# Copy the entire monorepo source code
-# This is done after npm install to leverage caching
+# Copia todo o código-fonte do monorepo.
+# Isso é feito após o npm install para aproveitar o cache.
 COPY . .
 
-# Generate Prisma client using the workspace command
+# Gera o cliente Prisma.
 RUN npm run prisma -- generate
 
-# Build the API application using the workspace command
+# Constrói a aplicação da API.
 RUN npm run build:api
 
 # ---
@@ -35,16 +35,22 @@ RUN apk add --no-cache openssl
 
 WORKDIR /app
 
-# Copy over the built application, node_modules, and necessary package/prisma files from the builder stage
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./
+# Copia os manifestos de pacotes e o lock file do estágio de build.
+COPY --from=builder /app/package.json /app/package-lock.json* ./
 COPY --from=builder /app/packages/api/package.json ./packages/api/
+COPY --from=builder /app/packages/web/package.json ./packages/web/ # Copia para manter a estrutura de workspace
+
+# Instala APENAS as dependências de produção usando npm ci.
+# Isso é mais rápido, seguro e robusto do que copiar a pasta node_modules inteira.
+RUN npm ci --omit=dev
+
+# Copia a aplicação construída e os arquivos necessários do Prisma do estágio de build.
 COPY --from=builder /app/packages/api/dist ./packages/api/dist
 COPY --from=builder /app/packages/api/prisma ./packages/api/prisma
 
-# Expõe a porta em que a aplicação roda
+# Expõe a porta em que a aplicação roda.
 EXPOSE 3001
 
-# Command to deploy database migrations and then start the server.
-# This ensures the database is ready before the application launches.
+# Comando para aplicar as migrações do banco de dados e depois iniciar o servidor.
+# Isso garante que o banco de dados esteja pronto antes do lançamento da aplicação.
 CMD ["sh", "-c", "npm run db:deploy && node packages/api/dist/main"]
