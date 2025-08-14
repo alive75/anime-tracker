@@ -45,5 +45,6 @@ COPY --from=builder /app/packages/api/prisma ./packages/api/prisma
 # Expõe a porta em que a aplicação roda
 EXPOSE 3001
 
-# Command to start the server. Path is relative to WORKDIR /app
-CMD ["node", "packages/api/dist/main"]
+# Command to deploy database migrations and then start the server.
+# This ensures the database is ready before the application launches.
+CMD ["sh", "-c", "npm run db:deploy && node packages/api/dist/main"]
