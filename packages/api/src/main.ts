@@ -12,22 +12,32 @@ async function bootstrap() {
     );
 
     const configService = app.get<ConfigService>(ConfigService);
-    const clientUrl = configService.get<string>('CLIENT_URL');
+
+    // --- Environment Variable Validation on Startup ---
+    // This check ensures the application fails fast with a clear error message
+    // if critical configuration is missing, preventing cryptic runtime crashes.
+    const requiredEnvVars = ['DATABASE_URL', 'JWT_SECRET', 'CLIENT_URL'];
+    const missingEnvVars = requiredEnvVars.filter(varName => !configService.get(varName));
+
+    if (missingEnvVars.length > 0) {
+        console.error('❌ FATAL ERROR: Missing required environment variables.');
+        missingEnvVars.forEach(varName => console.error(`- ${varName} is not defined.`));
+        console.error('\nPlease set these variables in your deployment environment (e.g., Coolify).');
+        console.error('Refer to the README.md for configuration details.');
+        console.error('Application is shutting down.');
+
+        // Using process.exit to ensure the container stops immediately,
+        // which is important for "unhealthy" status detection by the orchestrator.
+        process.exit(1);
+    }
+    // --- End Validation ---
 
     // Set a global prefix for all routes to make the API endpoints more explicit
     app.setGlobalPrefix('api');
 
-    // --- Improved CORS Configuration for Production Debugging ---
-    let corsOrigin: string | string[] | boolean = 'http://localhost:5173'; // Default for local dev
-
-    if (!clientUrl) {
-        console.warn('⚠️  WARNING: CLIENT_URL environment variable not set.');
-        console.warn('⚠️  Falling back to default CORS origin for local development: http://localhost:5173');
-        console.warn('⚠️  For production, set CLIENT_URL to your frontend\'s public domain (e.g., https://anime.ts75.uk)');
-    } else {
-        // Allow multiple origins by splitting a comma-separated string
-        corsOrigin = clientUrl.split(',').map(url => url.trim());
-    }
+    // --- CORS Configuration ---
+    const clientUrl = configService.get<string>('CLIENT_URL');
+    const corsOrigin = clientUrl.split(',').map(url => url.trim());
 
     app.enableCors({
         origin: corsOrigin,
@@ -43,8 +53,11 @@ async function bootstrap() {
     }));
 
     // Listen on 0.0.0.0 to be accessible from outside the Docker container
-    await app.listen(3001, '0.0.0.0');
-    console.log(`🚀 API server is running on http://localhost:3001/api`);
+    const port = configService.get<number>('PORT', 3001);
+    await app.listen(port, '0.0.0.0');
+
+    console.log(`🚀 API server is running on http://localhost:${port}/api`);
     console.log(`✅ CORS enabled for origin(s): ${JSON.stringify(corsOrigin)}`);
 }
 bootstrap();
+
