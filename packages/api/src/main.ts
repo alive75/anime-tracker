@@ -16,7 +16,11 @@ async function bootstrap() {
     // --- Environment Variable Validation on Startup ---
     // This check ensures the application fails fast with a clear error message
     // if critical configuration is missing, preventing cryptic runtime crashes.
-    const requiredEnvVars = ['DATABASE_URL', 'JWT_SECRET', 'CLIENT_URL'];
+    const requiredEnvVars = ['DATABASE_URL', 'JWT_SECRET'];
+
+    // CLIENT_URL is optional in production if not using CORS restrictions
+    const optionalEnvVars = ['CLIENT_URL'];
+
     const missingEnvVars = requiredEnvVars.filter(varName => !configService.get(varName));
 
     if (missingEnvVars.length > 0) {
@@ -30,6 +34,13 @@ async function bootstrap() {
         // which is important for "unhealthy" status detection by the orchestrator.
         process.exit(1);
     }
+
+    // Log optional variables status
+    optionalEnvVars.forEach(varName => {
+        if (!configService.get(varName)) {
+            console.warn(`⚠️  Optional environment variable ${varName} is not set. CORS will allow all origins.`);
+        }
+    });
     // --- End Validation ---
 
     // Set a global prefix for all routes to make the API endpoints more explicit
@@ -37,7 +48,11 @@ async function bootstrap() {
 
     // --- CORS Configuration ---
     const clientUrl = configService.get<string>('CLIENT_URL');
-    const corsOrigin = clientUrl.split(',').map(url => url.trim());
+    let corsOrigin: string[] | boolean = true; // Allow all origins by default
+
+    if (clientUrl) {
+        corsOrigin = clientUrl.split(',').map(url => url.trim());
+    }
 
     app.enableCors({
         origin: corsOrigin,
@@ -57,6 +72,6 @@ async function bootstrap() {
     await app.listen(port, '0.0.0.0');
 
     console.log(`🚀 API server is running on http://localhost:${port}/api`);
-    console.log(`✅ CORS enabled for origin(s): ${JSON.stringify(corsOrigin)}`);
+    console.log(`✅ CORS configuration:`, corsOrigin === true ? 'All origins allowed' : `Restricted to: ${JSON.stringify(corsOrigin)}`);
 }
 bootstrap();
