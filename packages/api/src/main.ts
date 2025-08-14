@@ -5,13 +5,22 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
 
-    // Configure CORS to allow specific origins.
-    // Using a static array can be more reliable with some reverse proxies.
+    const allowedOrigins = [
+        'http://localhost:5173', // For local development
+        'https://anime.ts75.uk',   // For production
+    ];
+
     app.enableCors({
-        origin: [
-            'http://localhost:5173', // For local development
-            'https://anime.ts75.uk',   // For production
-        ],
+        origin: (origin, callback) => {
+            // Allow requests with no origin (e.g., mobile apps, curl)
+            if (!origin) return callback(null, true);
+
+            if (allowedOrigins.indexOf(origin) === -1) {
+                const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+                return callback(new Error(msg), false);
+            }
+            return callback(null, true);
+        },
         methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
         credentials: true,
         allowedHeaders: 'Content-Type, Accept, Authorization',
