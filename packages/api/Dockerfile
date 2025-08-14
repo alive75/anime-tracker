@@ -4,7 +4,7 @@ FROM node:20-alpine AS builder
 
 # Instala o OpenSSL, que é uma dependência do Prisma Client para o Alpine.
 # Isso corrige possíveis problemas de tempo de execução em ambientes de produção.
-RUN apk add --no-cache openssl1.1-compat
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
