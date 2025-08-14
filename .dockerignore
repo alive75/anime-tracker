@@ -1,0 +1,38 @@
+# .dockerignore
+# Common ignores
+node_modules
+npm-debug.log
+.DS_Store
+*.pem
+*.key
+
+# Build output
+dist
+.next
+.vercel
+build
+
+# Root level dev files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+
+# Workspaces specific ignores
+packages/api/node_modules
+packages/api/dist
+packages/web/node_modules
+packages/web/dist
+
+# Editor specific
+.idea
+.vscode
