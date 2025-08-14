@@ -1,9 +1,7 @@
 # Estágio 1: Builder - Constrói a aplicação
-# Este Dockerfile espera que o contexto de build seja a raiz do monorepo.
 FROM node:20-alpine AS builder
 
 # Instala o OpenSSL, que é uma dependência do Prisma Client para o Alpine.
-# Isso corrige possíveis problemas de tempo de execução em ambientes de produção.
 RUN apk add --no-cache openssl
 
 WORKDIR /app
@@ -11,45 +9,64 @@ WORKDIR /app
 # Copia os manifestos de pacotes e o lock file para aproveitar o cache do Docker.
 COPY package.json package-lock.json* ./
 COPY packages/api/package.json ./packages/api/
-# Removendo a cópia do web/package.json pois não é necessário para o build da API
-# COPY packages/web/package.json ./packages/web/
 
-# Instala todas as dependências do monorepo.
+# Instala todas as dependências (incluindo devDependencies para o build)
 RUN npm install
 
-# Copia apenas os arquivos necessários para a API
+# Copia todo o código-fonte da API
 COPY packages/api/ ./packages/api/
 
-# Gera o cliente Prisma.
-RUN cd packages/api && npx prisma generate
+# Gera o cliente Prisma ANTES do build
+WORKDIR /app/packages/api
+RUN npx prisma generate
 
-# Constrói a aplicação da API.
+# Constrói a aplicação da API
+WORKDIR /app
 RUN npm run build:api
 
 # ---
 # Estágio 2: Production - Cria a imagem final
 FROM node:20-alpine
 
-# Instala o OpenSSL novamente para garantir que o Prisma Client funcione no ambiente de produção.
+# Instala o OpenSSL para o Prisma Client
 RUN apk add --no-cache openssl
 
 WORKDIR /app
 
-# Copia apenas os arquivos necessários do estágio de build
+# Copia os package.json files
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/packages/api/package.json ./packages/api/
 
-# Instala APENAS as dependências de produção da API
+# Copia o código fonte da API (necessário para o Prisma)
+COPY --from=builder /app/packages/api/prisma ./packages/api/prisma
+
+# Instala APENAS as dependências de produção
 RUN npm install --production --workspace=api
 
-# Copia a aplicação construída e os arquivos necessários do Prisma do estágio de build.
-COPY --from=builder /app/packages/api/dist ./packages/api/dist
-COPY --from=builder /app/packages/api/prisma ./packages/api/prisma
-COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
+# Gera o Prisma Client novamente no ambiente de produção
+WORKDIR /app/packages/api
+RUN npx prisma generate
 
-# Expõe a porta em que a aplicação roda.
+# Volta para o diretório raiz
+WORKDIR /app
+
+# Copia a aplicação construída
+COPY --from=builder /app/packages/api/dist ./packages/api/dist
+
+# Expõe a porta
 EXPOSE 3001
 
-# Comando para aplicar as migrações do banco de dados e depois iniciar o servidor.
-# Isso garante que o banco de dados esteja pronto antes do lançamento da aplicação.
-CMD ["sh", "-c", "cd packages/api && npx prisma migrate deploy && cd ../.. && node packages/api/dist/main"]
+# Script de inicialização que garante que tudo está funcionando
+RUN echo '#!/bin/sh' > /start.sh && \
+    echo 'set -e' >> /start.sh && \
+    echo 'echo "🔄 Starting Anime Tracker API..."' >> /start.sh && \
+    echo 'cd /app/packages/api' >> /start.sh && \
+    echo 'echo "📊 Running database migrations..."' >> /start.sh && \
+    echo 'npx prisma migrate deploy || (echo "❌ Migration failed" && exit 1)' >> /start.sh && \
+    echo 'echo "✅ Migrations completed successfully"' >> /start.sh && \
+    echo 'cd /app' >> /start.sh && \
+    echo 'echo "🚀 Starting NestJS application..."' >> /start.sh && \
+    echo 'node packages/api/dist/main' >> /start.sh && \
+    chmod +x /start.sh
+
+CMD ["/start.sh"]
