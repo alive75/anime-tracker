@@ -13,14 +13,8 @@ export default defineConfig(() => {
                 usePolling: true,
             },
         },
-        define: {
-            // The Gemini API guidelines require process.env.API_KEY.
-            // This exposes the environment variable from the Docker container
-            // to the client-side code. The value is set via `env_file` in `docker-compose.yml`.
-            'process.env': {
-                API_KEY: process.env.API_KEY
-            }
-        }
+        // Vite automatically loads variables from .env files.
+        // We will define VITE_API_URL and VITE_GEMINI_API_KEY in Coolify's UI.
+        // No 'define' block is needed for standard VITE_ prefixed variables.
     }
 })
-

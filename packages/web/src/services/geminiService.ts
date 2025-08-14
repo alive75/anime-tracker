@@ -1,11 +1,15 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { UserAnimeStatus } from '../types';
 
-if (!process.env.API_KEY) {
-    throw new Error("API_KEY environment variable not set");
+// Use the Vite environment variable for the API key
+const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
+if (!geminiApiKey) {
+    // This check is mostly for development; in production, Coolify will provide the variable.
+    console.error("VITE_GEMINI_API_KEY environment variable not set");
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey: geminiApiKey || '' });
 
 const CsvParseSchema = {
     type: Type.ARRAY,
@@ -39,12 +43,8 @@ export const parseAnimeCsv = async (csvText: string): Promise<{ title: string; w
             }
         });
 
-        const text = response.text;
-        if (!text) {
-            console.error("Error parsing CSV data: Received empty response from Gemini.");
-            return [];
-        }
-        return JSON.parse(text.trim());
+        const text = response.text.trim();
+        return JSON.parse(text);
     } catch (error) {
         console.error("Error parsing CSV data:", error);
         return [];
@@ -89,12 +89,8 @@ export const getAnimeRecommendations = async (watchedTitles: string[]): Promise<
             }
         });
 
-        const text = response.text;
-        if (!text) {
-            console.error("Error getting anime recommendations: Received empty response from Gemini.");
-            return [];
-        }
-        return JSON.parse(text.trim());
+        const text = response.text.trim();
+        return JSON.parse(text);
     } catch (error) {
         console.error("Error getting anime recommendations:", error);
         return [];
