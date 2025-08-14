@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
+import { exit } from 'process';
 
 async function bootstrap() {
     const app = await NestFactory.create<NestExpressApplication>(
@@ -28,7 +29,7 @@ async function bootstrap() {
 
         // Using process.exit to ensure the container stops immediately,
         // which is important for "unhealthy" status detection by the orchestrator.
-        process.exit(1);
+        exit(1);
     }
     // --- End Validation ---
 
@@ -60,4 +61,3 @@ async function bootstrap() {
     console.log(`✅ CORS enabled for origin(s): ${JSON.stringify(corsOrigin)}`);
 }
 bootstrap();
-
