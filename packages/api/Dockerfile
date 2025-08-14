@@ -2,6 +2,10 @@
 # This Dockerfile expects the build context to be the monorepo root.
 FROM node:20-alpine AS builder
 
+# Instala o OpenSSL, que é uma dependência do Prisma Client para o Alpine.
+# Isso corrige possíveis problemas de tempo de execução em ambientes de produção.
+RUN apk add --no-cache openssl1.1-compat
+
 WORKDIR /app
 
 # Copy all package manifests and lock file to leverage Docker cache
@@ -25,6 +29,9 @@ RUN npm run build:api
 # ---
 # Estágio 2: Production - Cria a imagem final
 FROM node:20-alpine
+
+# Instala o OpenSSL novamente para garantir que o Prisma Client funcione no ambiente de produção.
+RUN apk add --no-cache openssl1.1-compat
 
 WORKDIR /app
 
