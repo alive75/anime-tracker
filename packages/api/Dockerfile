@@ -1,27 +1,42 @@
-# Usa uma imagem base do Node.js
-FROM node:20-alpine
+# Estágio 1: Builder - Constrói a aplicação
+FROM node:20-alpine AS builder
 
-# Instala dependências do sistema necessárias para o Prisma
-# ca-certificates é para SSL em geral e openssl é especificamente para o motor do Prisma
-RUN apk add --no-cache openssl ca-certificates
+WORKDIR /app
 
-# Define o diretório de trabalho dentro do contêiner
-WORKDIR /usr/src/app
-
-# Copia os arquivos de gerenciamento de pacotes da raiz
+# Copia os arquivos de manifesto do pacote
 COPY package.json package-lock.json* ./
 
-# Copia o package.json específico da API
-COPY packages/api/package.json ./packages/api/
-
-# Copia o schema do Prisma para gerar o client
-COPY packages/api/prisma ./packages/api/prisma
-
-# Instala todas as dependências do monorepo
+# Instala todas as dependências (incluindo as de desenvolvimento)
 RUN npm install
 
-# Copia o restante do código-fonte da API
-COPY packages/api ./packages/api
+# Copia o resto do código-fonte da API
+COPY . .
 
-# O comando para executar a aplicação será fornecido pelo docker-compose.yml
-# para habilitar o hot-reloading. Ex: command: npm run dev --workspace=api
+# Gera o cliente Prisma
+RUN npx prisma generate
+
+# Constrói a aplicação NestJS para produção
+RUN npm run build
+
+# ---
+# Estágio 2: Production - Cria a imagem final
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copia os manifestos de dependência do estágio de builder
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/package-lock.json* ./
+
+# Instala apenas as dependências de produção
+RUN npm ci --omit=dev
+
+# Copia a aplicação construída e o schema do Prisma do builder
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
+
+# Expõe a porta em que a aplicação roda
+EXPOSE 3001
+
+# Comando para iniciar o servidor em produção
+CMD ["node", "dist/main"]
