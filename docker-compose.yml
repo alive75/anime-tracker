@@ -4,8 +4,8 @@ services:
   # API (NestJS)
   api:
     build:
-      context: ./packages/api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./packages/api/Dockerfile
     container_name: anime-tracker-api
     restart: unless-stopped
     env_file: .env
@@ -23,8 +23,8 @@ services:
   # Frontend (React + Vite)
   web:
     build:
-      context: ./packages/web
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./packages/web/Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL}
         VITE_GEMINI_API_KEY: ${VITE_GEMINI_API_KEY}

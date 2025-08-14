@@ -1,22 +1,26 @@
 # Estágio 1: Builder - Constrói a aplicação
+# This Dockerfile expects the build context to be the monorepo root.
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copia os arquivos de manifesto do pacote
+# Copy all package manifests and lock file to leverage Docker cache
 COPY package.json package-lock.json* ./
+COPY packages/api/package.json ./packages/api/
+COPY packages/web/package.json ./packages/web/
 
-# Instala todas as dependências (incluindo as de desenvolvimento)
+# Install all dependencies for the monorepo
 RUN npm install
 
-# Copia o resto do código-fonte da API
+# Copy the entire monorepo source code
+# This is done after npm install to leverage caching
 COPY . .
 
-# Gera o cliente Prisma
-RUN npx prisma generate
+# Generate Prisma client using the workspace command
+RUN npm run prisma -- generate
 
-# Constrói a aplicação NestJS para produção
-RUN npm run build
+# Build the API application using the workspace command
+RUN npm run build:api
 
 # ---
 # Estágio 2: Production - Cria a imagem final
@@ -24,19 +28,15 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copia os manifestos de dependência do estágio de builder
+# Copy over the built application, node_modules, and necessary package/prisma files from the builder stage
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
-COPY --from=builder /app/package-lock.json* ./
-
-# Instala apenas as dependências de produção
-RUN npm ci --omit=dev
-
-# Copia a aplicação construída e o schema do Prisma do builder
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/packages/api/package.json ./packages/api/
+COPY --from=builder /app/packages/api/dist ./packages/api/dist
+COPY --from=builder /app/packages/api/prisma ./packages/api/prisma
 
 # Expõe a porta em que a aplicação roda
 EXPOSE 3001
 
-# Comando para iniciar o servidor em produção
-CMD ["node", "dist/main"]
+# Command to start the server. Path is relative to WORKDIR /app
+CMD ["node", "packages/api/dist/main"]
