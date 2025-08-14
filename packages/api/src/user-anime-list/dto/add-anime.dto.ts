@@ -1,5 +1,5 @@
 import { IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
-import { UserAnimeStatus } from '@prisma/client';
+import { UserAnimeStatus } from '../user-anime-status.enum';
 
 export class AddAnimeDto {
     @IsInt()
@@ -14,4 +14,3 @@ export class AddAnimeDto {
     @IsOptional()
     watchedEpisodes?: number;
 }
-

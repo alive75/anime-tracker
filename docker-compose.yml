@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: ./packages/api/Dockerfile
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./packages/api:/usr/src/app/packages/api
+      - /usr/src/app/packages/api/node_modules # Isola node_modules para evitar conflitos com o host
+    env_file:
+      - .env
+    command: npm run dev --workspace=api
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  web:
+    build:
+      context: .
+      dockerfile: ./packages/web/Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./packages/web:/usr/src/app/packages/web
+      - /usr/src/app/packages/web/node_modules # Isola node_modules
+    env_file:
+      - .env
+    command: npm run dev --workspace=web
+    depends_on:
+      - api
+    networks:
+      - app-network
+
+  db:
+    image: postgres:15
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-anime_tracker}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-anime_tracker}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+
+networks:
+  app-network:
+    driver: bridge

@@ -7,12 +7,13 @@
     "scripts": {
         "lint": "eslint .",
         "format": "prettier --write .",
-        "dev:api": "npm run start:dev --workspace=api",
+        "start:dev": "npm run start:dev --workspace=api",
+        "dev:api": "npm run dev --workspace=api",
         "dev:web": "npm run dev --workspace=web",
         "build:api": "npm run build --workspace=api",
         "build:web": "npm run build --workspace=web",
         "prisma": "npm -w api run prisma",
-        "db:reset": "npm run prisma -- migrate dev --name init"
+        "db:reset": "npm run db:reset --workspace=api"
     },
     "devDependencies": {
         "@nestjs/cli": "^10.0.0",

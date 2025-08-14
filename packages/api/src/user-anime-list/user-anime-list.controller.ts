@@ -17,8 +17,11 @@ export class UserAnimeListController {
     }
 
     @Get()
-    getList(@GetUser() user: { userId: number }, @Query() query: GetListQueryDto) {
-        return this.userAnimeListService.getList(user.userId, query);
+    async getList(@GetUser() user: { userId: number }, @Query() query: GetListQueryDto) {
+        const listData = await this.userAnimeListService.getList(user.userId, query);
+        // Wrap the response in a 'data' object for consistency with other API endpoints
+        // like anime/search. This resolves frontend errors expecting an object wrapper.
+        return { data: listData };
     }
 
     @Patch(':id')
@@ -43,3 +46,4 @@ export class UserAnimeListController {
         return this.userAnimeListService.removeFromList(user.userId, userAnimeId);
     }
 }
+

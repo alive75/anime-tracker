@@ -1,6 +1,6 @@
 import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
-import { UserAnimeStatus } from '@prisma/client';
+import { UserAnimeStatus } from '../user-anime-status.enum';
 
 export class GetListQueryDto {
     @IsEnum(UserAnimeStatus)
@@ -16,4 +16,3 @@ export class GetListQueryDto {
     @IsOptional()
     year?: number;
 }
-

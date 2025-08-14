@@ -86,19 +86,22 @@ const Header: React.FC<{ onNavigate: (view: View) => void; currentView: View }> 
 };
 
 const Dashboard: React.FC = () => {
-    const { data: animeList = [], isLoading: isListLoading } = useQuery<UserAnime[]>({
+    const { data: animeListResponse, isLoading: isListLoading } = useQuery<{ data: UserAnime[] }>({
         queryKey: ['anime-list', 'ALL'],
         queryFn: () => api.get('/list').then(res => res.data),
     });
+    const animeList = animeListResponse?.data || [];
 
-    const { data: watchingList = [], isLoading: isWatchingLoading } = useQuery<UserAnime[]>({
-        queryKey: ['anime-list', UserAnimeStatus.Watching],
-        queryFn: () => api.get(`/list?status=${UserAnimeStatus.Watching}`).then(res => res.data),
+    const { data: watchingListResponse, isLoading: isWatchingLoading } = useQuery<{ data: UserAnime[] }>({
+        queryKey: ['anime-list', UserAnimeStatus.WATCHING],
+        queryFn: () => api.get(`/list?status=${UserAnimeStatus.WATCHING}`).then(res => res.data),
     });
+    const watchingList = watchingListResponse?.data || [];
 
     const stats = useMemo(() => {
+        if (!animeList) return { totalEpisodes: 0, completedCount: 0 };
         const totalEpisodes = animeList.reduce((sum, item) => sum + item.watchedEpisodes, 0);
-        const completedCount = animeList.filter(a => a.userStatus === UserAnimeStatus.Completed).length;
+        const completedCount = animeList.filter(a => a.userStatus === UserAnimeStatus.COMPLETED).length;
         return { totalEpisodes, completedCount };
     }, [animeList]);
 
@@ -151,10 +154,11 @@ const AddAnimeView: React.FC<{ onAnimeAdded: () => void }> = ({ onAnimeAdded }) 
         enabled: false,
     });
 
-    const { data: fullList = [] } = useQuery<UserAnime[]>({
+    const { data: fullListResponse } = useQuery<{ data: UserAnime[] }>({
         queryKey: ['anime-list', 'ALL'],
         queryFn: () => api.get('/list').then(res => res.data),
     });
+    const fullList = fullListResponse?.data || [];
 
     const addMutation = useMutation({
         mutationFn: (data: { animeApiId: number; status: UserAnimeStatus; }) => api.post('/list', data),
@@ -227,9 +231,9 @@ const AddAnimeView: React.FC<{ onAnimeAdded: () => void }> = ({ onAnimeAdded }) 
                 <div>
                     <p className="text-text-secondary mb-4">Set an initial status for this anime.</p>
                     <div className="grid grid-cols-1 gap-3">
-                        <button onClick={() => handleConfirmAdd(UserAnimeStatus.Watching)} className="w-full text-left p-3 rounded-md bg-base-300 hover:bg-brand-primary transition">Watching</button>
-                        <button onClick={() => handleConfirmAdd(UserAnimeStatus.Planned)} className="w-full text-left p-3 rounded-md bg-base-300 hover:bg-brand-primary transition">Plan to Watch</button>
-                        <button onClick={() => handleConfirmAdd(UserAnimeStatus.Completed)} className="w-full text-left p-3 rounded-md bg-base-300 hover:bg-brand-primary transition">Completed</button>
+                        <button onClick={() => handleConfirmAdd(UserAnimeStatus.WATCHING)} className="w-full text-left p-3 rounded-md bg-base-300 hover:bg-brand-primary transition">Watching</button>
+                        <button onClick={() => handleConfirmAdd(UserAnimeStatus.PLANNED)} className="w-full text-left p-3 rounded-md bg-base-300 hover:bg-brand-primary transition">Plan to Watch</button>
+                        <button onClick={() => handleConfirmAdd(UserAnimeStatus.COMPLETED)} className="w-full text-left p-3 rounded-md bg-base-300 hover:bg-brand-primary transition">Completed</button>
                     </div>
                 </div>
             </Modal>
@@ -243,10 +247,11 @@ const FullListView: React.FC = () => {
     const [yearFilter, setYearFilter] = useState<number | 'ALL'>('ALL');
     const [sort, setSort] = useState<'updatedAt' | 'title'>('updatedAt');
 
-    const { data: fullAnimeList = [] } = useQuery<UserAnime[]>({
+    const { data: fullAnimeListResponse } = useQuery<{ data: UserAnime[] }>({
         queryKey: ['anime-list', 'ALL_FOR_FILTERS'],
         queryFn: () => api.get('/list').then(res => res.data),
     });
+    const fullAnimeList = fullAnimeListResponse?.data || [];
 
     const { availableGenres, availableYears } = useMemo(() => {
         const genres = new Set<string>();
@@ -269,10 +274,11 @@ const FullListView: React.FC = () => {
     if (yearFilter !== 'ALL') queryParams.append('year', String(yearFilter));
 
     const queryKey = ['anime-list', statusFilter, genreFilter, yearFilter];
-    const { data: animeList = [], isLoading } = useQuery<UserAnime[]>({
+    const { data: animeListResponse, isLoading } = useQuery<{ data: UserAnime[] }>({
         queryKey,
         queryFn: () => api.get(`/list?${queryParams.toString()}`).then(res => res.data),
     });
+    const animeList = animeListResponse?.data || [];
 
     const sortedList = useMemo(() => {
         return [...animeList].sort((a, b) => {
@@ -283,7 +289,7 @@ const FullListView: React.FC = () => {
         });
     }, [animeList, sort]);
 
-    const statusOptions: (UserAnimeStatus | 'ALL')[] = ['ALL', UserAnimeStatus.Watching, UserAnimeStatus.Completed, UserAnimeStatus.Planned, UserAnimeStatus.Paused, UserAnimeStatus.Dropped];
+    const statusOptions: (UserAnimeStatus | 'ALL')[] = ['ALL', UserAnimeStatus.WATCHING, UserAnimeStatus.COMPLETED, UserAnimeStatus.PLANNED, UserAnimeStatus.PAUSED, UserAnimeStatus.DROPPED];
 
     if (isLoading) return <div className="text-center p-10">Loading your list...</div>;
 
@@ -336,10 +342,11 @@ const RecommendationsView: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const queryClient = useQueryClient();
 
-    const { data: animeList = [] } = useQuery<UserAnime[]>({
+    const { data: animeListResponse } = useQuery<{ data: UserAnime[] }>({
         queryKey: ['anime-list', 'ALL'],
         queryFn: () => api.get('/list').then(res => res.data),
     });
+    const animeList = animeListResponse?.data || [];
 
     const addMutation = useMutation({
         mutationFn: (data: { animeApiId: number; status: UserAnimeStatus; }) => api.post('/list', data),
@@ -428,7 +435,7 @@ const RecommendationsView: React.FC = () => {
                         <RecommendationCard
                             key={rec.mal_id}
                             anime={rec}
-                            onAdd={() => addMutation.mutate({ animeApiId: rec.mal_id, status: UserAnimeStatus.Planned })}
+                            onAdd={() => addMutation.mutate({ animeApiId: rec.mal_id, status: UserAnimeStatus.PLANNED })}
                             isAdding={addMutation.isPending && addMutation.variables?.animeApiId === rec.mal_id}
                             isAdded={isAnimeInList(rec.mal_id)}
                         />
@@ -463,3 +470,4 @@ const RecommendationsView: React.FC = () => {
 };
 
 export default TrackerPage;
+

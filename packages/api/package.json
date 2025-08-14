@@ -1,11 +1,26 @@
 {
     "name": "api",
     "version": "0.0.1",
+    "description": "Anime Tracker API",
     "private": true,
+    "license": "UNLICENSED",
     "scripts": {
         "build": "nest build",
+        "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+        "start": "nest start",
+        "dev": "nest start --watch",
+        "start:dev": "nest start --watch",
+        "start:debug": "nest start --debug --watch",
         "start:prod": "node dist/main",
-        "prisma": "prisma"
+        "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+        "test": "jest",
+        "test:watch": "jest --watch",
+        "test:cov": "jest --coverage",
+        "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+        "test:e2e": "jest --config ./test/jest-e2e.json",
+        "prisma": "prisma",
+        "db:reset": "prisma migrate reset --force",
+        "db:deploy": "prisma migrate deploy"
     },
     "dependencies": {
         "@nestjs/axios": "^3.0.2",
@@ -15,17 +30,34 @@
         "@nestjs/jwt": "^10.2.0",
         "@nestjs/passport": "^10.0.3",
         "@nestjs/platform-express": "^10.0.0",
-        "@prisma/client": "5.12.1",
+        "@nestjs/swagger": "^7.3.1",
+        "@prisma/client": "^5.12.1",
+        "axios": "^1.7.2",
         "bcrypt": "^5.1.1",
         "class-transformer": "^0.5.1",
         "class-validator": "^0.14.1",
+        "jsonwebtoken": "^9.0.2",
         "passport": "^0.7.0",
         "passport-jwt": "^4.0.1",
-        "reflect-metadata": "^0.2.2",
-        "rxjs": "^7.8.1"
+        "reflect-metadata": "^0.2.0",
+        "rxjs": "^7.8.1",
+        "swagger-ui-express": "^5.0.0"
     },
-    "devDependencies": {
-        "@nestjs/cli": "^10.0.0",
-        "prisma": "5.12.1"
+    "jest": {
+        "moduleFileExtensions": [
+            "js",
+            "json",
+            "ts"
+        ],
+        "rootDir": "src",
+        "testRegex": ".*\\.spec\\.ts$",
+        "transform": {
+            "^.+\\.(t|j)s$": "ts-jest"
+        },
+        "collectCoverageFrom": [
+            "**/*.(t|j)s"
+        ],
+        "coverageDirectory": "../coverage",
+        "testEnvironment": "node"
     }
 }

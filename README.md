@@ -1,14 +1,20 @@
-# Run and deploy your AI Studio app
+# Anime Tracker - Monorepo
 
-This contains everything you need to run your app locally.
+This project is a full-stack Anime Tracker application built with React (Vite) on the frontend and NestJS on the backend, containerized with Docker.
 
-## Run Locally
+## Prerequisites
 
-**Prerequisites:**  Node.js
+- Docker and Docker Compose
+- Node.js and npm (for local development or if you prefer not to use Docker for everything)
+- A code editor like VS Code
 
+## Getting Started with Docker (Recommended)
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+This is the simplest way to get the entire stack (frontend, backend, database) running.
+
+### 1. Configure Environment Variables
+
+The application uses a `.env` file for configuration. Create a `.env` file in the root of the project by copying the example:
+
+```bash
+cp .env.example .env

@@ -4,166 +4,166 @@ import { AnimeService } from '../anime/anime.service';
 import { AddAnimeDto } from './dto/add-anime.dto';
 import { UpdateAnimeDto } from './dto/update-anime.dto';
 import { GetListQueryDto } from './dto/get-list-query.dto';
-import { UserAnimeStatus } from '@prisma/client';
+import { UserAnimeStatus } from './user-anime-status.enum';
 
 @Injectable()
 export class UserAnimeListService {
-    constructor(
-        private readonly prisma: PrismaService,
-        private readonly animeService: AnimeService,
-    ) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly animeService: AnimeService,
+  ) {}
 
-    async addToList(userId: number, addAnimeDto: AddAnimeDto) {
-        const { animeApiId, status, watchedEpisodes } = addAnimeDto;
+  async addToList(userId: number, addAnimeDto: AddAnimeDto) {
+    const { animeApiId, status, watchedEpisodes } = addAnimeDto;
 
-        const existingEntry = await this.prisma.userAnime.findUnique({
-            where: { userId_animeId: { userId, animeId: animeApiId } },
-        });
+    const existingEntry = await this.prisma.userAnime.findUnique({
+      where: { userId_animeId: { userId, animeId: animeApiId } },
+    });
 
-        if (existingEntry) {
-            throw new ConflictException('This anime is already in your list.');
-        }
-
-        const anime = await this.animeService.findOrCreate(animeApiId);
-
-        const newEntry = await this.prisma.userAnime.create({
-            data: {
-                userId,
-                animeId: anime.id,
-                userStatus: status,
-                watchedEpisodes: watchedEpisodes ?? (status === UserAnimeStatus.COMPLETED ? anime.totalEpisodes : 0),
-            },
-            include: {
-                anime: true, // Include anime details in the response
-            }
-        });
-
-        return newEntry;
+    if (existingEntry) {
+      throw new ConflictException('This anime is already in your list.');
     }
 
-    async getList(userId: number, query: GetListQueryDto) {
-        const where: any = {
-            userId,
-        };
-        if (query.status) {
-            where.userStatus = query.status;
-        }
-        if (query.genre) {
-            // Use 'has' for array field searching in PostgreSQL
-            where.anime = { ...where.anime, genres: { has: query.genre } };
-        }
-        if (query.year) {
-            where.anime = { ...where.anime, releaseYear: query.year };
-        }
+    const anime = await this.animeService.findOrCreate(animeApiId);
 
-        const list = await this.prisma.userAnime.findMany({
-            where,
-            include: {
-                anime: true,
-            },
-            orderBy: {
-                updatedAt: 'desc',
-            },
-        });
+    const newEntry = await this.prisma.userAnime.create({
+      data: {
+        userId,
+        animeId: anime.id,
+        userStatus: status,
+        watchedEpisodes: watchedEpisodes ?? (status === UserAnimeStatus.COMPLETED ? anime.totalEpisodes : 0),
+      },
+      include: {
+        anime: true, // Include anime details in the response
+      }
+    });
 
-        return list;
+    return newEntry;
+  }
+
+  async getList(userId: number, query: GetListQueryDto) {
+    const where: any = {
+      userId,
+    };
+    if (query.status) {
+      where.userStatus = query.status;
+    }
+    if (query.genre) {
+      // Use 'has' for array field searching in PostgreSQL
+      where.anime = { ...where.anime, genres: { has: query.genre } };
+    }
+    if (query.year) {
+      where.anime = { ...where.anime, releaseYear: query.year };
     }
 
-    async updateEntry(userId: number, userAnimeId: number, updateAnimeDto: UpdateAnimeDto) {
-        const entry = await this.prisma.userAnime.findUnique({
-            where: { id: userAnimeId },
-            include: { anime: true },
-        });
+    const list = await this.prisma.userAnime.findMany({
+      where,
+      include: {
+        anime: true,
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+    });
 
-        if (!entry || entry.userId !== userId) {
-            throw new NotFoundException('Anime list entry not found.');
-        }
+    return list;
+  }
 
-        const { status, watchedEpisodes } = updateAnimeDto;
-        const dataToUpdate: { watchedEpisodes?: number; userStatus?: UserAnimeStatus } = {};
+  async updateEntry(userId: number, userAnimeId: number, updateAnimeDto: UpdateAnimeDto) {
+    const entry = await this.prisma.userAnime.findUnique({
+      where: { id: userAnimeId },
+       include: { anime: true },
+    });
 
-        if (status) {
-            dataToUpdate.userStatus = status;
-        }
-        if (watchedEpisodes !== undefined) {
-            dataToUpdate.watchedEpisodes = watchedEpisodes;
-        }
+    if (!entry || entry.userId !== userId) {
+      throw new NotFoundException('Anime list entry not found.');
+    }
+    
+    const { status, watchedEpisodes } = updateAnimeDto;
+    const dataToUpdate: { watchedEpisodes?: number; userStatus?: UserAnimeStatus } = {};
 
-        if (watchedEpisodes !== undefined && status === undefined) {
-            if (entry.userStatus === UserAnimeStatus.PLANNED && watchedEpisodes > 0) {
-                dataToUpdate.userStatus = UserAnimeStatus.WATCHING;
-            }
-            if (entry.anime.totalEpisodes > 0 && watchedEpisodes >= entry.anime.totalEpisodes) {
-                dataToUpdate.userStatus = UserAnimeStatus.COMPLETED;
-                dataToUpdate.watchedEpisodes = entry.anime.totalEpisodes;
-            }
-        }
-
-        if (status === UserAnimeStatus.COMPLETED && entry.anime.totalEpisodes > 0) {
-            dataToUpdate.watchedEpisodes = entry.anime.totalEpisodes;
-        }
-
-        const updatedEntry = await this.prisma.userAnime.update({
-            where: { id: userAnimeId },
-            data: dataToUpdate,
-            include: {
-                anime: true,
-            }
-        });
-
-        return updatedEntry;
+    if (status) {
+      dataToUpdate.userStatus = status;
+    }
+    if (watchedEpisodes !== undefined) {
+      dataToUpdate.watchedEpisodes = watchedEpisodes;
+    }
+    
+    if (watchedEpisodes !== undefined && status === undefined) {
+      if (entry.userStatus === UserAnimeStatus.PLANNED && watchedEpisodes > 0) {
+        dataToUpdate.userStatus = UserAnimeStatus.WATCHING;
+      }
+      if (entry.anime.totalEpisodes > 0 && watchedEpisodes >= entry.anime.totalEpisodes) {
+        dataToUpdate.userStatus = UserAnimeStatus.COMPLETED;
+        dataToUpdate.watchedEpisodes = entry.anime.totalEpisodes;
+      }
     }
 
-    async incrementProgress(userId: number, userAnimeId: number) {
-        const entry = await this.prisma.userAnime.findUnique({
-            where: { id: userAnimeId },
-            include: { anime: true },
-        });
+    if (status === UserAnimeStatus.COMPLETED && entry.anime.totalEpisodes > 0) {
+      dataToUpdate.watchedEpisodes = entry.anime.totalEpisodes;
+    }
+    
+    const updatedEntry = await this.prisma.userAnime.update({
+      where: { id: userAnimeId },
+      data: dataToUpdate,
+      include: {
+        anime: true,
+      }
+    });
 
-        if (!entry || entry.userId !== userId) {
-            throw new NotFoundException('Anime list entry not found.');
-        }
+    return updatedEntry;
+  }
 
-        if (entry.userStatus === UserAnimeStatus.COMPLETED && entry.anime.totalEpisodes > 0) {
-            return entry; // Already completed
-        }
+  async incrementProgress(userId: number, userAnimeId: number) {
+     const entry = await this.prisma.userAnime.findUnique({
+      where: { id: userAnimeId },
+      include: { anime: true },
+    });
 
-        const newEpisodeCount = entry.watchedEpisodes + 1;
-        let newStatus = entry.userStatus;
-
-        if (entry.userStatus === UserAnimeStatus.PLANNED) {
-            newStatus = UserAnimeStatus.WATCHING;
-        } else if (entry.anime.totalEpisodes > 0 && newEpisodeCount >= entry.anime.totalEpisodes) {
-            newStatus = UserAnimeStatus.COMPLETED;
-        }
-
-        const updatedEntry = await this.prisma.userAnime.update({
-            where: { id: userAnimeId },
-            data: {
-                watchedEpisodes: newEpisodeCount,
-                userStatus: newStatus,
-            },
-            include: {
-                anime: true,
-            }
-        });
-
-        return updatedEntry;
+    if (!entry || entry.userId !== userId) {
+      throw new NotFoundException('Anime list entry not found.');
     }
 
-    async removeFromList(userId: number, userAnimeId: number) {
-        const entry = await this.prisma.userAnime.findUnique({
-            where: { id: userAnimeId },
-        });
-
-        if (!entry || entry.userId !== userId) {
-            throw new NotFoundException('Anime list entry not found.');
-        }
-
-        await this.prisma.userAnime.delete({
-            where: { id: userAnimeId },
-        });
-
-        return { message: 'Successfully removed from list.' };
+    if (entry.userStatus === UserAnimeStatus.COMPLETED && entry.anime.totalEpisodes > 0) {
+      return entry; // Already completed
     }
+    
+    const newEpisodeCount = entry.watchedEpisodes + 1;
+    let newStatus = entry.userStatus;
+    
+    if (entry.userStatus === UserAnimeStatus.PLANNED) {
+      newStatus = UserAnimeStatus.WATCHING;
+    } else if (entry.anime.totalEpisodes > 0 && newEpisodeCount >= entry.anime.totalEpisodes) {
+        newStatus = UserAnimeStatus.COMPLETED;
+    }
+
+    const updatedEntry = await this.prisma.userAnime.update({
+        where: { id: userAnimeId },
+        data: {
+            watchedEpisodes: newEpisodeCount,
+            userStatus: newStatus,
+        },
+        include: {
+            anime: true,
+        }
+    });
+
+    return updatedEntry;
+  }
+
+  async removeFromList(userId: number, userAnimeId: number) {
+    const entry = await this.prisma.userAnime.findUnique({
+      where: { id: userAnimeId },
+    });
+
+    if (!entry || entry.userId !== userId) {
+      throw new NotFoundException('Anime list entry not found.');
+    }
+
+    await this.prisma.userAnime.delete({
+      where: { id: userAnimeId },
+    });
+
+    return { message: 'Successfully removed from list.' };
+  }
 }

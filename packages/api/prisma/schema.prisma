@@ -1,59 +1,65 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// packages/api/prisma/schema.prisma
 
 generator client {
-    provider = "prisma-client-js"
+  provider = "prisma-client-js"
+  // The 'native' target is for your local machine.
+  // The 'linux-musl-openssl-3.0.x' is specifically for the Alpine Linux
+  // environment inside Docker, matching its OpenSSL version. This fixes the error.
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
-// Defines the database connection for PostgreSQL.
 datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
+
+// Models
 
 model User {
-    id            Int         @id @default(autoincrement())
-    email         String      @unique
-    password_hash String
-    createdAt     DateTime    @default(now())
-    updatedAt     DateTime    @updatedAt
-    animeList     UserAnime[]
+  id            Int         @id @default(autoincrement())
+  email         String      @unique
+  password_hash String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  animeList     UserAnime[]
 }
 
 model Anime {
-    id            Int         @id // Using the external API's ID (e.g., MyAnimeList ID)
-    title         String
-    synopsis      String
-    totalEpisodes Int
-    airingStatus  String
-    coverImageUrl String
-    releaseYear   Int
-    genres        String[] // Using native array type for PostgreSQL
-    users         UserAnime[]
-    createdAt     DateTime    @default(now())
-    updatedAt     DateTime    @updatedAt
+  id              Int         @id // Jikan/MAL ID, not auto-incremented
+  title           String
+  synopsis        String      @db.Text
+  totalEpisodes   Int
+  airingStatus    String
+  coverImageUrl   String      @db.Text
+  releaseYear     Int
+  genres          String[]    // PostgreSQL array type
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  userEntries     UserAnime[]
 }
 
 model UserAnime {
-    id              Int             @id @default(autoincrement())
-    user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-    userId          Int
-    anime           Anime           @relation(fields: [animeId], references: [id], onDelete: Cascade)
-    animeId         Int
-    userStatus      UserAnimeStatus // Using native enum type for PostgreSQL
-    watchedEpisodes Int
-    createdAt       DateTime        @default(now())
-    updatedAt       DateTime        @updatedAt
+  id              Int             @id @default(autoincrement())
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          Int
+  anime           Anime           @relation(fields: [animeId], references: [id], onDelete: Cascade)
+  animeId         Int
+  userStatus      UserAnimeStatus
+  watchedEpisodes Int
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
-    @@unique([userId, animeId])
+  @@unique([userId, animeId]) // A user can only have one entry per anime
+  @@index([userId])
+  @@index([animeId])
 }
 
-// Defines the possible statuses a user can assign to an anime.
-// This is supported natively by PostgreSQL.
+// Enums
+
 enum UserAnimeStatus {
-    WATCHING
-    COMPLETED
-    PLANNED
-    DROPPED
-    PAUSED
+  WATCHING
+  COMPLETED
+  PLANNED
+  DROPPED
+  PAUSED
 }

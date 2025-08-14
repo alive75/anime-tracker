@@ -1,35 +1,35 @@
 export enum UserAnimeStatus {
-    Watching = 'WATCHING',
-    Completed = 'COMPLETED',
-    Planned = 'PLANNED',
-    Dropped = 'DROPPED',
-    Paused = 'PAUSED',
+  WATCHING = 'WATCHING',
+  COMPLETED = 'COMPLETED',
+  PLANNED = 'PLANNED',
+  DROPPED = 'DROPPED',
+  PAUSED = 'PAUSED',
 }
 
 export enum AiringStatus {
-    Releasing = 'Currently Airing',
-    Finished = 'Finished Airing',
-    NotYetReleased = 'Not yet aired',
-    Cancelled = 'Cancelled'
+  Releasing = 'Currently Airing',
+  Finished = 'Finished Airing',
+  NotYetReleased = 'Not yet aired',
+  Cancelled = 'Cancelled'
 }
 
 export interface Anime {
-    id: number;
-    title: string;
-    synopsis: string;
-    totalEpisodes: number;
-    airingStatus: AiringStatus;
-    coverImageUrl: string;
-    genres: string[];
-    releaseYear: number;
+  id: number;
+  title: string;
+  synopsis: string;
+  totalEpisodes: number;
+  airingStatus: AiringStatus;
+  coverImageUrl: string;
+  genres: string[];
+  releaseYear: number;
 }
 
 export interface UserAnime {
-    id: number; // This is the ID of the UserAnime record itself
-    userStatus: UserAnimeStatus;
-    watchedEpisodes: number;
-    updatedAt: string; // timestamp
-    anime: Anime; // The nested anime details from the backend
+  id: number; // This is the ID of the UserAnime record itself
+  userStatus: UserAnimeStatus;
+  watchedEpisodes: number;
+  updatedAt: string; // timestamp
+  anime: Anime; // The nested anime details from the backend
 }
 
 // Type for search results from Jikan API via our backend

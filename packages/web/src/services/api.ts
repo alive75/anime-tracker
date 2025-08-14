@@ -1,12 +1,7 @@
 import axios from 'axios';
 
-// By using a relative baseURL, we can use the same code for both
-// local development and production.
-// In development, Vite's proxy will forward requests from /api to the backend.
-// In production, the reverse proxy (e.g., in Coolify, Vercel, etc.)
-// should be configured to do the same.
 const api = axios.create({
-    baseURL: '/api',
+    baseURL: 'http://localhost:3001/api', // Backend API with /api prefix
 });
 
 // Add a request interceptor to include the token in headers

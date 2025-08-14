@@ -1,53 +1,27 @@
-# packages/api/Dockerfile
+# Usa uma imagem base do Node.js
+FROM node:20-alpine
 
-# ---- Base ----
-# Use a base image with Node.js for a consistent environment
-FROM node:18-alpine AS base
+# Instala dependências do sistema necessárias para o Prisma
+# ca-certificates é para SSL em geral e openssl é especificamente para o motor do Prisma
+RUN apk add --no-cache openssl ca-certificates
+
+# Define o diretório de trabalho dentro do contêiner
 WORKDIR /usr/src/app
 
-# ---- Dependencies ----
-# First, copy only the package.json files to leverage Docker layer caching.
-# This step will only be re-run if these files change.
-FROM base AS deps
-COPY package.json ./
-COPY packages/api/package.json ./packages/api/
-COPY packages/web/package.json ./packages/web/
+# Copia os arquivos de gerenciamento de pacotes da raiz
+COPY package.json package-lock.json* ./
 
-# Install all dependencies for the monorepo
+# Copia o package.json específico da API
+COPY packages/api/package.json ./packages/api/
+
+# Copia o schema do Prisma para gerar o client
+COPY packages/api/prisma ./packages/api/prisma
+
+# Instala todas as dependências do monorepo
 RUN npm install
 
-# ---- Builder ----
-# Build the NestJS application
-FROM base AS builder
-# Copy all source code and the installed dependencies
-COPY . .
-COPY --from=deps /usr/src/app/node_modules ./node_modules
+# Copia o restante do código-fonte da API
+COPY packages/api ./packages/api
 
-# Generate Prisma Client
-# This is crucial for the build step as NestJS needs the generated types.
-RUN npx prisma generate --schema=./packages/api/prisma/schema.prisma
-
-# Build the NestJS application. The `build:api` script is in the root package.json
-RUN npm run build:api
-
-# ---- Production ----
-# Create a small, optimized production image
-FROM node:18-alpine AS production
-WORKDIR /usr/src/app
-
-# Set NODE_ENV to production
-ENV NODE_ENV=production
-
-# Copy only the necessary files for running the production server
-COPY --from=builder /usr/src/app/node_modules ./node_modules
-COPY --from=builder /usr/src/app/package.json ./
-COPY --from=builder /usr/src/app/packages/api/package.json ./packages/api/
-COPY --from=builder /usr/src/app/packages/api/dist ./packages/api/dist
-COPY --from=builder /usr/src/app/packages/api/prisma ./packages/api/prisma
-
-# Expose the port the API will run on
-EXPOSE 3001
-
-# Command to run the application
-# We use the script from the workspace's package.json
-CMD ["npm", "run", "start:prod", "--workspace=api"]
+# O comando para executar a aplicação será fornecido pelo docker-compose.yml
+# para habilitar o hot-reloading. Ex: command: npm run dev --workspace=api
