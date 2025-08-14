@@ -11,17 +11,17 @@ WORKDIR /app
 # Copia os manifestos de pacotes e o lock file para aproveitar o cache do Docker.
 COPY package.json package-lock.json* ./
 COPY packages/api/package.json ./packages/api/
-COPY packages/web/package.json ./packages/web/
+# Removendo a cópia do web/package.json pois não é necessário para o build da API
+# COPY packages/web/package.json ./packages/web/
 
 # Instala todas as dependências do monorepo.
 RUN npm install
 
-# Copia todo o código-fonte do monorepo.
-# Isso é feito após o npm install para aproveitar o cache.
-COPY . .
+# Copia apenas os arquivos necessários para a API
+COPY packages/api/ ./packages/api/
 
 # Gera o cliente Prisma.
-RUN npm run prisma -- generate
+RUN cd packages/api && npx prisma generate
 
 # Constrói a aplicação da API.
 RUN npm run build:api
@@ -35,22 +35,21 @@ RUN apk add --no-cache openssl
 
 WORKDIR /app
 
-# Copia os manifestos de pacotes e o lock file do estágio de build.
-COPY --from=builder /app/package.json /app/package-lock.json* ./
+# Copia apenas os arquivos necessários do estágio de build
+COPY --from=builder /app/package.json ./
 COPY --from=builder /app/packages/api/package.json ./packages/api/
-COPY --from=builder /app/packages/web/package.json ./packages/web/ # Copia para manter a estrutura de workspace
 
-# Instala APENAS as dependências de produção usando npm ci.
-# Isso é mais rápido, seguro e robusto do que copiar a pasta node_modules inteira.
-RUN npm ci --omit=dev
+# Instala APENAS as dependências de produção da API
+RUN npm install --production --workspace=api
 
 # Copia a aplicação construída e os arquivos necessários do Prisma do estágio de build.
 COPY --from=builder /app/packages/api/dist ./packages/api/dist
 COPY --from=builder /app/packages/api/prisma ./packages/api/prisma
+COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
 
 # Expõe a porta em que a aplicação roda.
 EXPOSE 3001
 
 # Comando para aplicar as migrações do banco de dados e depois iniciar o servidor.
 # Isso garante que o banco de dados esteja pronto antes do lançamento da aplicação.
-CMD ["sh", "-c", "npm run db:deploy && node packages/api/dist/main"]
+CMD ["sh", "-c", "cd packages/api && npx prisma migrate deploy && cd ../.. && node packages/api/dist/main"]
