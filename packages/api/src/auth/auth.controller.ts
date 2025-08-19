@@ -23,7 +23,9 @@ export class AuthController {
   @Post('magic-link')
   @HttpCode(HttpStatus.OK)
   async sendMagicLink(@Body() magicLinkDto: MagicLinkDto) {
+    console.log('🔥 AuthController: Magic link endpoint called with email:', magicLinkDto.email);
     await this.authService.sendMagicLink(magicLinkDto.email);
+    console.log('🔥 AuthController: Magic link sent successfully');
     return { message: 'Magic link sent. Please check your email.' };
   }
 

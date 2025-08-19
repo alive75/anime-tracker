@@ -75,8 +75,10 @@ export class AuthService {
   }
 
   async sendMagicLink(email: string) {
+    console.log('🔥 AuthService: sendMagicLink called with email:', email);
     const payload = { email };
     const token = await this.jwtService.signAsync(payload, { expiresIn: '15m' });
+    console.log('🔥 AuthService: JWT token generated');
 
     const clientUrl = this.configService.get<string>('CLIENT_URL');
     if (!clientUrl) {
@@ -84,10 +86,12 @@ export class AuthService {
       throw new InternalServerErrorException('Server configuration error.');
     }
 
-    const magicLink = `${clientUrl}/magic-link-callback?token=${token}`;
+    const magicLink = `${clientUrl}/auth/callback?token=${token}`;
+    console.log('🔥 AuthService: Magic link generated:', magicLink);
     
-    // Replace console.log with the actual email service call
+    console.log('🔥 AuthService: Calling emailService.sendMagicLink...');
     await this.emailService.sendMagicLink(email, magicLink);
+    console.log('🔥 AuthService: emailService.sendMagicLink completed');
 
     // We don't throw an error if the user doesn't exist to prevent email enumeration.
   }
