@@ -35,7 +35,7 @@ export class AnimeService {
     ) { }
 
     async search(query: string) {
-        const { data } = await firstValueFrom(
+        const response = await firstValueFrom(
             this.httpService.get<JikanSearchResponse>(`${this.JIKAN_API_URL}/anime`, { params: { q: query, limit: 10 } }).pipe(
                 catchError((error: AxiosError) => {
                     console.error(error.response?.data);
@@ -43,7 +43,7 @@ export class AnimeService {
                 }),
             ),
         );
-        return data;
+        return response.data;
     }
 
     async findOrCreate(animeApiId: number) {
@@ -55,7 +55,7 @@ export class AnimeService {
             return existingAnime;
         }
 
-        const { data } = await firstValueFrom(
+        const response = await firstValueFrom(
             this.httpService.get<JikanAnimeResponse>(`${this.JIKAN_API_URL}/anime/${animeApiId}`).pipe(
                 catchError((error: AxiosError) => {
                     console.error(error.response?.data);
@@ -64,7 +64,7 @@ export class AnimeService {
             ),
         );
 
-        const animeData = data.data;
+        const animeData = response.data.data;
 
         const releaseYear = animeData.aired?.from ? new Date(animeData.aired.from).getFullYear() : 0;
         const genres = animeData.genres?.map(g => g.name) ?? [];
@@ -85,4 +85,3 @@ export class AnimeService {
         return createdAnime;
     }
 }
-

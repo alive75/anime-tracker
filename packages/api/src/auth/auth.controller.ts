@@ -1,30 +1,35 @@
-import { Body, Controller, HttpCode, HttpStatus, Options, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { MagicLinkDto } from './dto/magic-link.dto';
+import { MagicLinkCallbackDto } from './dto/magic-link-callback.dto';
 
 @Controller('auth')
 export class AuthController {
-    constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
-    /**
-     * Handles preflight OPTIONS requests for CORS.
-     * This is sometimes necessary to make reverse proxies and browsers happy.
-     * The `enableCors` in `main.ts` will attach the correct headers.
-     */
-    @Options('*')
-    @HttpCode(HttpStatus.NO_CONTENT)
-    handleOptions() { }
+  @Post('register')
+  register(@Body() registerDto: RegisterDto) {
+    return this.authService.register(registerDto);
+  }
 
-    @Post('register')
-    register(@Body() registerDto: RegisterDto) {
-        return this.authService.register(registerDto);
-    }
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  login(@Body() loginDto: LoginDto) {
+    return this.authService.login(loginDto);
+  }
 
-    @Post('login')
-    @HttpCode(HttpStatus.OK)
-    login(@Body() loginDto: LoginDto) {
-        return this.authService.login(loginDto);
-    }
+  @Post('magic-link')
+  @HttpCode(HttpStatus.OK)
+  async sendMagicLink(@Body() magicLinkDto: MagicLinkDto) {
+    await this.authService.sendMagicLink(magicLinkDto.email);
+    return { message: 'Magic link sent. Please check your email.' };
+  }
+
+  @Post('magic-link/callback')
+  @HttpCode(HttpStatus.OK)
+  loginWithMagicLink(@Body() magicLinkCallbackDto: MagicLinkCallbackDto) {
+    return this.authService.loginWithMagicLink(magicLinkCallbackDto.token);
+  }
 }
-

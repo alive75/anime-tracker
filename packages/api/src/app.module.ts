@@ -6,6 +6,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { AnimeModule } from './anime/anime.module';
 import { UserAnimeListModule } from './user-anime-list/user-anime-list.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { UserAnimeListModule } from './user-anime-list/user-anime-list.module';
     AuthModule,
     AnimeModule,
     UserAnimeListModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

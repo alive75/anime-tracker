@@ -8,6 +8,8 @@ interface AuthContextType {
     login: (data: LoginData) => Promise<void>;
     register: (data: RegisterData) => Promise<void>;
     logout: () => void;
+    requestMagicLink: (email: string) => Promise<void>;
+    loginWithToken: (token: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,8 +25,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const { access_token } = response.data;
             setToken(access_token);
             localStorage.setItem('authToken', access_token);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Login failed', error);
+            if (error.code === 'ERR_NETWORK') {
+                throw new Error('Connection Error: Could not connect to the API. Is the backend server running?');
+            }
             throw error;
         } finally {
             setIsLoading(false);
@@ -48,7 +53,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         localStorage.removeItem('authToken');
     };
 
-    const value = { token, isLoading, login, register, logout };
+    const requestMagicLink = async (email: string) => {
+        setIsLoading(true);
+        try {
+            await api.post('/auth/magic-link', { email });
+        } catch (error: any) {
+            console.error('Sending magic link failed', error);
+            if (error.code === 'ERR_NETWORK') {
+                throw new Error('Connection Error: Could not connect to the API. Is the backend server running?');
+            }
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const loginWithToken = (accessToken: string) => {
+        setToken(accessToken);
+        localStorage.setItem('authToken', accessToken);
+    };
+
+    const value = { token, isLoading, login, register, logout, requestMagicLink, loginWithToken };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

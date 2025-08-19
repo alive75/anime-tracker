@@ -1,12 +1,11 @@
 import React from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import { AnimeProvider } from './context/AnimeContext';
 import { AuthProvider } from './hooks/useAuth';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
 import TrackerPage from './pages/TrackerPage';
+import MagicLinkCallbackPage from './pages/MagicLinkCallbackPage';
 
 const router = createBrowserRouter([
   {
@@ -14,8 +13,8 @@ const router = createBrowserRouter([
     element: <LoginPage />,
   },
   {
-    path: '/register',
-    element: <RegisterPage />,
+    path: '/auth/callback',
+    element: <MagicLinkCallbackPage />,
   },
   {
     path: '/',
@@ -37,9 +36,7 @@ const router = createBrowserRouter([
 const App: React.FC = () => {
   return (
     <AuthProvider>
-      <AnimeProvider>
-        <RouterProvider router={router} />
-      </AnimeProvider>
+      <RouterProvider router={router} />
     </AuthProvider>
   );
 };
